@@ -1,0 +1,67 @@
+   Map<String, KStream<String, String>> wordsMap = streamsBuilder.<String, String>stream(inputTopic)
+                .peek((key, value) -> log.info("New incoming message: key: {}, message: {}", key, value))
+                .split(Named.as("message-"))
+                .branch((key, message) -> message.length() > 5, Branched.as("valid"))
+                .defaultBranch(Branched.as("invalid"));
+
+        wordsMap.get("message-valid").mapValues((key,message)-> message.toUpperCase()).to(validMessagesTopic);
+        wordsMap.get("message-invalid").mapValues((key,message)->message.toLowerCase()).to(invalidMessagesTopic);
+
+CustomSerde<PizzaOrder> deserializer = new CustomSerde<>(PizzaOrder.class);
+        CustomSerde<Incident> incidentSerde = new CustomSerde<>(Incident.class);
+
+        Map<String, KStream<String, PizzaOrder>> pizzaOrder =
+                streamsBuilder.stream(pizzaInTopic, Consumed.with(Serdes.String(), deserializer))
+                        .peek((key, value) ->
+                                log.info(String.format("New incoming order. Key: %s,\n %s\n%s\n%s",
+                                        key, value.getPizzaOrderId(), value.getRecipientDetails(), value.getPizzaDetails())))
+                        .split(Named.as("pizza-"))
+                        .branch((key, value) -> pizzaService.isRecordNotValid(value), Branched.as("bad-record"))
+                        .branch((key, value) -> pizzaService.isPineappleOnPizza(value), Branched.as("pineapple"))
+                        .branch((key, value) -> pizzaService.pizzaSize(value).equalsIgnoreCase("BIG"), Branched.as("big"))
+                        .branch((key, value) -> pizzaService.pizzaSize(value).equalsIgnoreCase("MEDIUM"), Branched.as("medium"))
+                        .branch((key, value) -> pizzaService.pizzaSize(value).equalsIgnoreCase("SMALL"), Branched.as("small"))
+                        .defaultBranch(Branched.as("default"));
+
+        pizzaOrder.get("pizza-big").mapValues(pizzaService::mapToOrder).to(pizzaOrderTopic);
+        pizzaOrder.get("pizza-medium").mapValues(pizzaService::mapToOrder).to(pizzaOrderTopic);
+        pizzaOrder.get("pizza-small").mapValues(pizzaService::mapToOrder).to(pizzaOrderTopic);
+        pizzaOrder.get("pizza-pineapple").mapValues(pizzaService::mapToIncident).to(incidentTopic, Produced.with(Serdes.String(), incidentSerde));*/
+
+
+
+
+
+
+
+
+
+         //STATELESS
+                //VALID MESSAGES
+                KStream<String, String> validMessages = streamsBuilder.<String, String>stream("validMessages", Consumed.with(Serdes.String(), Serdes.String()));
+                validMessages.peek((key,value)-> log.info(String.format("Valid message received. Message: %s",value)));
+
+
+
+
+                //INVALID MESSAGES
+                KStream<String, String> invalidMessages = streamsBuilder.<String, String>stream("invalidMessages", Consumed.with(Serdes.String(), Serdes.String()));
+                invalidMessages.peek((key,value)-> log.info(String.format("Invalid message received. Message: %s",value)));
+
+                //PIZZA ORDER MESSAGES
+                KStream<String, String> pizzaOrder = streamsBuilder.<String, String>stream("pizzaOrder", Consumed.with(Serdes.String(), Serdes.String()));
+                pizzaOrder.peek((key,value)-> log.info(String.format("pizzaOrder value: %s",value)));
+
+                //INCIDENT MESSAGES
+                KStream<String, Incident> pineapplePizzaTopic = streamsBuilder.<String, Incident>stream("pineapplePizzaTopic", Consumed.with(Serdes.String(), customSerde));
+                pineapplePizzaTopic.peek((key, value)-> log.info(String.format("Pineapple incident - Key: %s,\n%s",key,value)));
+
+                 //STATEFUL
+                                Pattern pattern = Pattern.compile("\\W+", Pattern.UNICODE_CHARACTER_CLASS);
+                               /* KTable<String, Long> kTable = validMessages.flatMapValues(value -> Arrays.asList(pattern.split(value.toLowerCase())))
+                                        .groupBy((key, word) -> word)
+                                        .count();
+                                kTable.toStream()
+                                        .foreach((word, count) -> System.out.println("word: " + word + " -> " + count));
+                                kTable.toStream().peek((word,count)-> System.out.println("Sending: "+word+"" +
+                                        " -> "+count)).to("outputWordsTopic",Produced.with(Serdes.String(),Serdes.Long()));*/*/
