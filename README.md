@@ -1,5 +1,5 @@
 # KafkaStreams
-<p>This is a project created for my public speech.</p>
+This is a project created for my public speech.<br>
 Use postman for sending POST's:<br>
 - localhost:8080/sendString <br>
 - localhost:8080/sendStringFromDifferentTopic<br>
